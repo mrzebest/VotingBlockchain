@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système de Vote Blockchain</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.10.0/web3.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗳️ Système de Vote Blockchain</h1>
+            <p>Système de vote décentralisé et transparent</p>
+        </div>
+        
+        <div class="content">
+            <div class="section status">
+                <h2>📊 État du Système</h2>
+                <div id="statusInfo" class="loading">Connexion en cours...</div>
+                <div id="connectionStatus"></div>
+            </div>
+            
+            <div class="section">
+                <h2>👥 Administration</h2>
+                <div class="input-group">
+                    <label for="candidateName">Nom du candidat:</label>
+                    <input type="text" id="candidateName" placeholder="Entrez le nom du candidat">
+                </div>
+                <button class="btn" onclick="addCandidate()">➕ Ajouter Candidat</button>
+                <br>
+                <button class="btn btn-success" onclick="startVoting()">🚀 Démarrer Vote</button>
+                <button class="btn btn-danger" onclick="endVoting()">⏹️ Arrêter Vote</button>
+            </div>
+            
+            <div class="section">
+                <h2>🗳️ Voter</h2>
+                <div id="candidatesList"></div>
+                <div id="voteMessage"></div>
+            </div>
+            
+            <div class="section">
+                <h2>📈 Résultats</h2>
+                <button class="btn" onclick="updateResults()">🔄 Actualiser Résultats</button>
+                <div id="results"></div>
+                <div id="winner"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration simulée (pour démonstration sans vraie blockchain)
+        let simulatedContract = {
+            owner: 'admin',
+            currentUser: 'user1', // Simule l'utilisateur connecté
+            votingOpen: false,
+            candidates: [],
+            votes: {},
+            hasVoted: {}
+        };
+
+        // Simulation de Web3
+        class MockWeb3 {
+            constructor() {
+                this.isConnected = true;
+            }
+        }
+
+        let web3 = new MockWeb3();
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            console.log('Initialisation du système de vote...');
+            updateConnectionStatus();
+            updateStatus();
+            updateCandidatesList();
+            updateResults();
+        }
+
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (web3.isConnected) {
+                statusDiv.innerHTML = '<div class="message success">✅ Connecté à la blockchain (Mode simulation)</div>';
+            } else {
+                statusDiv.innerHTML = '<div class="message error">❌ Non connecté à la blockchain</div>';
+            }
+        }
+
+        function updateStatus() {
+            const statusDiv = document.getElementById('statusInfo');
+            const votingStatus = simulatedContract.votingOpen ? 
+                '<span style="color: #10b981;">🟢 OUVERT</span>' : 
+                '<span style="color: #ef4444;">🔴 FERMÉ</span>';
+            
+            const totalCandidates = simulatedContract.candidates.length;
+            const totalVotes = Object.values(simulatedContract.votes).reduce((sum, count) => sum + count, 0);
+            
+            statusDiv.innerHTML = `
+                <p><strong>État du vote:</strong> ${votingStatus}</p>
+                <p><strong>Nombre de candidats:</strong> ${totalCandidates}</p>
+                <p><strong>Total des votes:</strong> ${totalVotes}</p>
+                <p><strong>Utilisateur actuel:</strong> ${simulatedContract.currentUser}</p>
+                <p><strong>A déjà voté:</strong> ${simulatedContract.hasVoted[simulatedContract.currentUser] ? 'Oui' : 'Non'}</p>
+            `;
+        }
+
+        async function addCandidate() {
+            const name = document.getElementById('candidateName').value;
+            const messageDiv = document.getElementById('voteMessage');
+            
+            if (!name.trim()) {
+                messageDiv.innerHTML = '<div class="message error">❌ Veuillez entrer un nom de candidat</div>';
+                return;
+            }
+            
+            if (simulatedContract.currentUser !== simulatedContract.owner) {
+                messageDiv.innerHTML = '<div class="message error">❌ Seul l\'administrateur peut ajouter des candidats</div>';
+                return;
+            }
+            
+            if (simulatedContract.votingOpen) {
+                messageDiv.innerHTML = '<div class="message error">❌ Impossible d\'ajouter des candidats pendant le vote</div>';
+                return;
+            }
+            
+            // Ajouter le candidat
+            const candidateId = simulatedContract.candidates.length + 1;
+            simulatedContract.candidates.push({ id: candidateId, name: name });
+            simulatedContract.votes[candidateId] = 0;
+            
+            document.getElementById('candidateName').value = '';
+            messageDiv.innerHTML = '<div class="message success">✅ Candidat ajouté avec succès!</div>';
+            
+            updateStatus();
+            updateCandidatesList();
+            updateResults();
+        }
+
+        async function startVoting() {
+            const messageDiv = document.getElementById('voteMessage');
+            
+            if (simulatedContract.currentUser !== simulatedContract.owner) {
+                messageDiv.innerHTML = '<div class="message error">❌ Seul l\'administrateur peut démarrer le vote</div>';
+                return;
+            }
+            
+            if (simulatedContract.candidates.length === 0) {
+                messageDiv.innerHTML = '<div class="message error">❌ Aucun candidat ajouté</div>';
+                return;
+            }
+            
+            if (simulatedContract.votingOpen) {
+                messageDiv.innerHTML = '<div class="message error">❌ Le vote est déjà ouvert</div>';
+                return;
+            }
+            
+            simulatedContract.votingOpen = true;
+            messageDiv.innerHTML = '<div class="message success">✅ Vote démarré!</div>';
+            
+            updateStatus();
+            updateCandidatesList();
+        }
+
+        async function endVoting() {
+            const messageDiv = document.getElementById('voteMessage');
+            
+            if (simulatedContract.currentUser !== simulatedContract.owner) {
+                messageDiv.innerHTML = '<div class="message error">❌ Seul l\'administrateur peut arrêter le vote</div>';
+                return;
+            }
+            
+            if (!simulatedContract.votingOpen) {
+                messageDiv.innerHTML = '<div class="message error">❌ Le vote n\'est pas ouvert</div>';
+                return;
+            }
+            
+            simulatedContract.votingOpen = false;
+            messageDiv.innerHTML = '<div class="message success">✅ Vote terminé!</div>';
+            
+            updateStatus();
+            updateCandidatesList();
+            updateResults();
+        }
+
+        async function vote(candidateId) {
+            const messageDiv = document.getElementById('voteMessage');
+            
+            if (!simulatedContract.votingOpen) {
+                messageDiv.innerHTML = '<div class="message error">❌ Le vote n\'est pas ouvert</div>';
+                return;
+            }
+            
+            if (simulatedContract.hasVoted[simulatedContract.currentUser]) {
+                messageDiv.innerHTML = '<div class="message error">❌ Vous avez déjà voté</div>';
+                return;
+            }
+            
+            // Enregistrer le vote
+            simulatedContract.votes[candidateId]++;
+            simulatedContract.hasVoted[simulatedContract.currentUser] = true;
+            
+            const candidateName = simulatedContract.candidates.find(c => c.id === candidateId).name;
+            messageDiv.innerHTML = `<div class="message success">✅ Vote enregistré pour ${candidateName}!</div>`;
+            
+            updateStatus();
+            updateCandidatesList();
+            updateResults();
+        }
+
+        function updateCandidatesList() {
+            const listDiv = document.getElementById('candidatesList');
+            
+            if (simulatedContract.candidates.length === 0) {
+                listDiv.innerHTML = '<div class="message info">ℹ️ Aucun candidat ajouté</div>';
+                return;
+            }
+            
+            let html = '';
+            simulatedContract.candidates.forEach(candidate => {
+                const canVote = simulatedContract.votingOpen && !simulatedContract.hasVoted[simulatedContract.currentUser];
+                const buttonClass = canVote ? 'btn' : 'btn' + ' disabled';
+                const buttonText = canVote ? '🗳️ Voter' : (simulatedContract.votingOpen ? '❌ Déjà voté' : '⏸️ Vote fermé');
+                
+                html += `
+                    <div class="candidate-item">
+                        <span class="candidate-name">${candidate.name}</span>
+                        <button class="${buttonClass}" 
+                                onclick="vote(${candidate.id})" 
+                                ${!canVote ? 'disabled' : ''}>
+                            ${buttonText}
+                        </button>
+                    </div>
+                `;
+            });
+            
+            listDiv.innerHTML = html;
+        }
+
+        function updateResults() {
+            const resultsDiv = document.getElementById('results');
+            const winnerDiv = document.getElementById('winner');
+            
+            if (simulatedContract.candidates.length === 0) {
+                resultsDiv.innerHTML = '<div class="message info">ℹ️ Aucun résultat à afficher</div>';
+                winnerDiv.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            let maxVotes = 0;
+            let winner = null;
+            
+            simulatedContract.candidates.forEach(candidate => {
+                const votes = simulatedContract.votes[candidate.id] || 0;
+                if (votes > maxVotes) {
+                    maxVotes = votes;
+                    winner = candidate;
+                }
+                
+                html += `
+                    <div class="candidate-item">
+                        <span class="candidate-name">${candidate.name}</span>
+                        <span class="vote-count">${votes} vote(s)</span>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+            
+            // Afficher le gagnant
+            if (winner && maxVotes > 0) {
+                winnerDiv.innerHTML = `
+                    <div class="message winner">
+                        🏆 Gagnant: ${winner.name} avec ${maxVotes} vote(s)
+                    </div>
+                `;
+            } else {
+                winnerDiv.innerHTML = '<div class="message info">ℹ️ Aucun vote enregistré</div>';
+            }
+        }
+
+        // Fonction pour simuler différents utilisateurs
+        function switchUser(userId) {
+            simulatedContract.currentUser = userId;
+            updateStatus();
+            updateCandidatesList();
+            document.getElementById('voteMessage').innerHTML = 
+                `<div class="message info">ℹ️ Utilisateur changé: ${userId}</div>`;
+        }
+
+        // Ajouter des boutons pour simuler différents utilisateurs
+        document.addEventListener('DOMContentLoaded', function() {
+            const adminSection = document.querySelector('.section h2').parentElement;
+            const userButtons = document.createElement('div');
+            userButtons.innerHTML = `
+                <h3 style="margin-top: 20px; color: #1e293b;">🔄 Simuler utilisateurs:</h3>
+                <button class="btn" onclick="switchUser('admin')">👑 Admin</button>
+                <button class="btn" onclick="switchUser('user1')">👤 User1</button>
+                <button class="btn" onclick="switchUser('user2')">👤 User2</button>
+                <button class="btn" onclick="switchUser('user3')">👤 User3</button>
+            `;
+            adminSection.appendChild(userButtons);
+        });
+    </script>
+</body>
+</html>
